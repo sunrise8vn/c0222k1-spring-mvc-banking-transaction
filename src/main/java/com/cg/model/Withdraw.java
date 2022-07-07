@@ -3,12 +3,11 @@ package com.cg.model;
 import javax.persistence.*;
 import javax.validation.constraints.Digits;
 import java.math.BigDecimal;
-import java.util.Date;
 
 
 @Entity
 @Table(name = "withdraws")
-public class Withdraw {
+public class Withdraw extends BaseEntities {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -22,18 +21,41 @@ public class Withdraw {
     @JoinColumn(name = "customer_id")
     private Customer customer;
 
-    @Column(name = "created_at")
-    private Date createdAt;
+    public Withdraw() {
+    }
 
-    @Column(name = "created_by")
-    private String createdBy;
+    public Withdraw(Long id, @Digits(integer = 12, fraction = 0) BigDecimal transactionAmount) {
+        this.id = id;
+        this.transactionAmount = transactionAmount;
+    }
 
-    @Column(name = "updated_at")
-    private Date updatedAt;
+    public Withdraw(Long id, @Digits(integer = 12, fraction = 0) BigDecimal transactionAmount, Customer customer) {
+        this.id = id;
+        this.transactionAmount = transactionAmount;
+        this.customer = customer;
+    }
 
-    @Column(name = "updated_by")
-    private String updatedBy;
+    public Long getId() {
+        return id;
+    }
 
-    @Column(columnDefinition = "boolean default false")
-    private boolean deleted;
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public BigDecimal getTransactionAmount() {
+        return transactionAmount;
+    }
+
+    public void setTransactionAmount(BigDecimal transactionAmount) {
+        this.transactionAmount = transactionAmount;
+    }
+
+    public Customer getCustomer() {
+        return customer;
+    }
+
+    public void setCustomer(Customer customer) {
+        this.customer = customer;
+    }
 }

@@ -3,12 +3,11 @@ package com.cg.model;
 import javax.persistence.*;
 import javax.validation.constraints.Digits;
 import java.math.BigDecimal;
-import java.util.Date;
 
 
 @Entity
 @Table(name = "transfers")
-public class Transfer {
+public class Transfer extends BaseEntities {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -37,18 +36,80 @@ public class Transfer {
     @JoinColumn(name = "recipient_id")
     private Customer recipient;
 
-    @Column(name = "created_at")
-    private Date createdAt;
+    public Transfer() {
+    }
 
-    @Column(name = "created_by")
-    private String createdBy;
+    public Transfer(Long id, @Digits(integer = 12, fraction = 0) BigDecimal transferAmount, long fees, @Digits(integer = 12, fraction = 0) BigDecimal feesAmount, @Digits(integer = 12, fraction = 0) BigDecimal transactionAmount) {
+        this.id = id;
+        this.transferAmount = transferAmount;
+        this.fees = fees;
+        this.feesAmount = feesAmount;
+        this.transactionAmount = transactionAmount;
+    }
 
-    @Column(name = "updated_at")
-    private Date updatedAt;
+    public Transfer(Long id, @Digits(integer = 12, fraction = 0) BigDecimal transferAmount, long fees, @Digits(integer = 12, fraction = 0) BigDecimal feesAmount, @Digits(integer = 12, fraction = 0) BigDecimal transactionAmount, Customer sender, Customer recipient) {
+        this.id = id;
+        this.transferAmount = transferAmount;
+        this.fees = fees;
+        this.feesAmount = feesAmount;
+        this.transactionAmount = transactionAmount;
+        this.sender = sender;
+        this.recipient = recipient;
+    }
 
-    @Column(name = "updated_by")
-    private String updatedBy;
+    public Long getId() {
+        return id;
+    }
 
-    @Column(columnDefinition = "boolean default false")
-    private boolean deleted;
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public BigDecimal getTransferAmount() {
+        return transferAmount;
+    }
+
+    public void setTransferAmount(BigDecimal transferAmount) {
+        this.transferAmount = transferAmount;
+    }
+
+    public long getFees() {
+        return fees;
+    }
+
+    public void setFees(long fees) {
+        this.fees = fees;
+    }
+
+    public BigDecimal getFeesAmount() {
+        return feesAmount;
+    }
+
+    public void setFeesAmount(BigDecimal feesAmount) {
+        this.feesAmount = feesAmount;
+    }
+
+    public BigDecimal getTransactionAmount() {
+        return transactionAmount;
+    }
+
+    public void setTransactionAmount(BigDecimal transactionAmount) {
+        this.transactionAmount = transactionAmount;
+    }
+
+    public Customer getSender() {
+        return sender;
+    }
+
+    public void setSender(Customer sender) {
+        this.sender = sender;
+    }
+
+    public Customer getRecipient() {
+        return recipient;
+    }
+
+    public void setRecipient(Customer recipient) {
+        this.recipient = recipient;
+    }
 }
