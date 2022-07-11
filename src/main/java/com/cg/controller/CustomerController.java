@@ -4,13 +4,17 @@ package com.cg.controller;
 import com.cg.model.Customer;
 import com.cg.model.Deposit;
 import com.cg.model.Transfer;
+import com.cg.model.dto.TransferDTO;
 import com.cg.service.customer.CustomerService;
 import com.cg.service.deposit.DepositService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.ModelAndView;
 
+import javax.validation.Valid;
 import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
@@ -88,21 +92,27 @@ public class CustomerController {
         ModelAndView modelAndView = new ModelAndView();
         modelAndView.setViewName("/customer/transfer");
 
-        Optional<Customer> customer = customerService.findById(id);
+        Optional<Customer> sender = customerService.findById(id);
 
-        if (customer.isPresent()) {
-            modelAndView.addObject("sender", customer.get());
+        if (sender.isPresent()) {
 
-            List<Customer> recipients = customerService.findAllByIdNot(customer.get().getId());
+            TransferDTO transferDTO = new TransferDTO();
+            transferDTO.setSenderId(sender.get().getId().toString());
+            transferDTO.setSenderName(sender.get().getFullName());
+            transferDTO.setEmail(sender.get().getEmail());
+            transferDTO.setBalance(sender.get().getBalance().toString());
+
+
+            modelAndView.addObject("transferDTO", transferDTO);
+
+            List<Customer> recipients = customerService.findAllByIdNot(sender.get().getId());
 
             modelAndView.addObject("recipients", recipients);
         }
         else {
-            modelAndView.addObject("sender", new Customer());
+            modelAndView.addObject("transferDTO", new TransferDTO());
             modelAndView.addObject("recipients", null);
         }
-
-        modelAndView.addObject("transfer", new Transfer());
 
         return modelAndView;
     }
@@ -177,15 +187,23 @@ public class CustomerController {
     }
 
     @PostMapping("/transfer/{senderId}")
-    public ModelAndView doTransfer(@PathVariable Long senderId, @ModelAttribute Transfer transfer) {
+    public ModelAndView doTransfer(@PathVariable Long senderId, @Validated @ModelAttribute TransferDTO transferDTO, BindingResult bindingResult) {
         ModelAndView modelAndView = new ModelAndView();
         modelAndView.setViewName("/customer/transfer");
+
+        if (bindingResult.hasFieldErrors()) {
+            modelAndView.addObject("hasError", true);
+            modelAndView.addObject("recipients", customerService.findAllByIdNot(senderId));
+            return modelAndView;
+        }
 
         Optional<Customer> senderOptional = customerService.findById(senderId);
 
         if (senderOptional.isPresent()) {
 
-            Optional<Customer> recipientOptional = customerService.findById(transfer.getRecipient().getId());
+            Long recipientId = Long.parseLong(transferDTO.getRecipientId());
+
+            Optional<Customer> recipientOptional = customerService.findById(recipientId);
 
             if (recipientOptional.isPresent()) {
                 if (senderOptional.get().getId().equals(recipientOptional.get().getId())) {
@@ -194,46 +212,58 @@ public class CustomerController {
                 }
                 else {
                     BigDecimal currentBalance = senderOptional.get().getBalance();
-                    BigDecimal transferAmount = transfer.getTransferAmount();
+                    BigDecimal transferAmount = new BigDecimal(transferDTO.getTransferAmount());
                     int fees = 10;
                     BigDecimal feesAmount = transferAmount.multiply(BigDecimal.valueOf(fees)).divide(BigDecimal.valueOf(100));
                     BigDecimal transactionAmount = transferAmount.add(feesAmount);
 
                     if (currentBalance.compareTo(transactionAmount) >= 0) {
+
+                        Transfer transfer = new Transfer();
+
                         transfer.setId(0l);
                         transfer.setSender(senderOptional.get());
+                        transfer.setRecipient(recipientOptional.get());
+                        transfer.setTransferAmount(transferAmount);
                         transfer.setFees(10);
                         transfer.setFeesAmount(feesAmount);
                         transfer.setTransactionAmount(transactionAmount);
 
-                        customerService.doTransfer(transfer);
+                        try {
+                            customerService.doTransfer(transfer);
 
-                        Optional<Customer> sender = customerService.findById(senderId);
+                            TransferDTO newTransferDTO = new TransferDTO();
+                            transferDTO.setSenderId(senderOptional.get().getId().toString());
+                            transferDTO.setSenderName(senderOptional.get().getFullName());
+                            transferDTO.setEmail(senderOptional.get().getEmail());
+                            transferDTO.setBalance(senderOptional.get().getBalance().toString());
 
-                        modelAndView.addObject("sender", sender.get());
+                            Optional<Customer> sender = customerService.findById(senderId);
 
-                        List<Customer> recipients = customerService.findAllByIdNot(sender.get().getId());
+                            modelAndView.addObject("transferDTO", newTransferDTO);
 
-                        modelAndView.addObject("recipients", recipients);
+                            List<Customer> recipients = customerService.findAllByIdNot(sender.get().getId());
+
+                            modelAndView.addObject("recipients", recipients);
+                        } catch (Exception e) {
+                            modelAndView.addObject("error", "hệ thống bị lỗi");
+                        }
                     }
                     else {
                         modelAndView.addObject("error", "Sender balance not enough to transfer transaction");
-                        modelAndView.addObject("sender", new Customer());
+                        modelAndView.addObject("transferDTO", new TransferDTO());
                     }
-
                 }
             }
             else {
                 modelAndView.addObject("error", "Invalid Recipient information");
-                modelAndView.addObject("sender", new Customer());
+                modelAndView.addObject("transferDTO", new TransferDTO());
             }
         }
         else {
             modelAndView.addObject("error", "Invalid Sender information");
-            modelAndView.addObject("customer", new Customer());
+            modelAndView.addObject("transferDTO", new TransferDTO());
         }
-
-        modelAndView.addObject("transfer", new Transfer());
 
         return modelAndView;
     }

@@ -56,6 +56,7 @@ public class CustomerServiceImpl implements CustomerService {
     public void deposit(Customer customer, Deposit deposit) {
 
         customerRepository.incrementBalance(customer.getId(), deposit.getTransactionAmount());
+
         depositRepository.save(deposit);
     }
 

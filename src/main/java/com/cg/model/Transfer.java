@@ -1,7 +1,9 @@
 package com.cg.model;
 
+import org.hibernate.validator.constraints.Length;
+
 import javax.persistence.*;
-import javax.validation.constraints.Digits;
+import javax.validation.constraints.*;
 import java.math.BigDecimal;
 
 
