@@ -3,6 +3,7 @@ package com.cg.controller;
 
 import com.cg.model.Customer;
 import com.cg.model.Deposit;
+import com.cg.model.Transfer;
 import com.cg.service.customer.CustomerService;
 import com.cg.service.deposit.DepositService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -82,6 +83,30 @@ public class CustomerController {
         return modelAndView;
     }
 
+    @GetMapping("/transfer/{id}")
+    public ModelAndView showTransferPage(@PathVariable Long id) {
+        ModelAndView modelAndView = new ModelAndView();
+        modelAndView.setViewName("/customer/transfer");
+
+        Optional<Customer> customer = customerService.findById(id);
+
+        if (customer.isPresent()) {
+            modelAndView.addObject("sender", customer.get());
+
+            List<Customer> recipients = customerService.findAllByIdNot(customer.get().getId());
+
+            modelAndView.addObject("recipients", recipients);
+        }
+        else {
+            modelAndView.addObject("sender", new Customer());
+            modelAndView.addObject("recipients", null);
+        }
+
+        modelAndView.addObject("transfer", new Transfer());
+
+        return modelAndView;
+    }
+
     @PostMapping("/create")
     public ModelAndView doCreate(@ModelAttribute Customer customer) {
         ModelAndView modelAndView = new ModelAndView();
@@ -147,6 +172,68 @@ public class CustomerController {
         }
 
         modelAndView.addObject("deposit", new Deposit());
+
+        return modelAndView;
+    }
+
+    @PostMapping("/transfer/{senderId}")
+    public ModelAndView doTransfer(@PathVariable Long senderId, @ModelAttribute Transfer transfer) {
+        ModelAndView modelAndView = new ModelAndView();
+        modelAndView.setViewName("/customer/transfer");
+
+        Optional<Customer> senderOptional = customerService.findById(senderId);
+
+        if (senderOptional.isPresent()) {
+
+            Optional<Customer> recipientOptional = customerService.findById(transfer.getRecipient().getId());
+
+            if (recipientOptional.isPresent()) {
+                if (senderOptional.get().getId().equals(recipientOptional.get().getId())) {
+                    modelAndView.addObject("error", "Invalid Sender and Recipient information");
+                    modelAndView.addObject("sender", new Customer());
+                }
+                else {
+                    BigDecimal currentBalance = senderOptional.get().getBalance();
+                    BigDecimal transferAmount = transfer.getTransferAmount();
+                    int fees = 10;
+                    BigDecimal feesAmount = transferAmount.multiply(BigDecimal.valueOf(fees)).divide(BigDecimal.valueOf(100));
+                    BigDecimal transactionAmount = transferAmount.add(feesAmount);
+
+                    if (currentBalance.compareTo(transactionAmount) >= 0) {
+                        transfer.setId(0l);
+                        transfer.setSender(senderOptional.get());
+                        transfer.setFees(10);
+                        transfer.setFeesAmount(feesAmount);
+                        transfer.setTransactionAmount(transactionAmount);
+
+                        customerService.doTransfer(transfer);
+
+                        Optional<Customer> sender = customerService.findById(senderId);
+
+                        modelAndView.addObject("sender", sender.get());
+
+                        List<Customer> recipients = customerService.findAllByIdNot(sender.get().getId());
+
+                        modelAndView.addObject("recipients", recipients);
+                    }
+                    else {
+                        modelAndView.addObject("error", "Sender balance not enough to transfer transaction");
+                        modelAndView.addObject("sender", new Customer());
+                    }
+
+                }
+            }
+            else {
+                modelAndView.addObject("error", "Invalid Recipient information");
+                modelAndView.addObject("sender", new Customer());
+            }
+        }
+        else {
+            modelAndView.addObject("error", "Invalid Sender information");
+            modelAndView.addObject("customer", new Customer());
+        }
+
+        modelAndView.addObject("transfer", new Transfer());
 
         return modelAndView;
     }
